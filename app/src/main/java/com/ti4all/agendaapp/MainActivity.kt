@@ -9,12 +9,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-//import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,10 +18,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.ti4all.agendaapp.data.Agenda
 import com.ti4all.agendaapp.data.AgendaViewModel
-import com.ti4all.agendaapp.data.ViaCepService
+import com.ti4all.agendaapp.data.Endereco
 import com.ti4all.agendaapp.ui.theme.AgendaAppTheme
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AgendaViewModel by viewModels()
@@ -81,7 +74,6 @@ fun AgendaList(
                     Icon(Icons.Filled.Edit, contentDescription = "Editar contato")
                 }
 
-
                 IconButton(onClick = { onRemoveClick(agenda) }) {
                     Icon(Icons.Filled.Delete, contentDescription = "Remover contato")
                 }
@@ -99,7 +91,6 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
     var agendaToEdit by remember { mutableStateOf<Agenda?>(null) }
     var showRemoveDialog by remember { mutableStateOf(false) }
     var agendaToRemove by remember { mutableStateOf<Agenda?>(null) }
-//    var cep by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.listarTodos()
@@ -124,18 +115,6 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-//            OutlinedTextField(
-//                value = cep,
-//                onValueChange = { cep = it },
-//                label = { Text("Digite o CEP") }
-//            )
-//            Spacer(modifier = Modifier.height(8.dp))
-//            Button(onClick = {
-//                // Buscar CEP
-//            }) {
-//                Text("Buscar CEP")
-//            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             agendaList.forEach { agenda ->
@@ -175,19 +154,13 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
         if (showDialog) {
             AgendaFormDialog(
                 onDismissRequest = { showDialog = false },
-                viewModel = viewModel,  // Adicione o viewModel aqui
-                onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
-                    viewModel.inserir(
-                        Agenda(
-                            nome = nome,
-                            telefone = telefone,
-                            cep = cep,
-                            logradouro = logradouro,
-                            bairro = bairro,
-                            localidade = localidade,
-                            uf = uf
-                        )
-                    )
+                viewModel = viewModel,
+                onAddClick = { nome, telefone, endereco ->
+                    viewModel.inserir(Agenda(
+                        nome = nome,
+                        telefone = telefone,
+                        endereco = endereco
+                    ))
                     showDialog = false
                 }
             )
@@ -197,8 +170,8 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
             Edit(
                 nomeInicial = agendaToEdit!!.nome,
                 telefoneInicial = agendaToEdit!!.telefone,
-                cepInicial = agendaToEdit!!.cep,  // Novo campo
-                logradouroInicial = agendaToEdit!!.logradouro,  // Novo campo
+                cepInicial = agendaToEdit!!.cep,
+                logradouroInicial = agendaToEdit!!.logradouro,
                 bairroInicial = agendaToEdit!!.bairro,
                 localidadeInicial = agendaToEdit!!.localidade,
                 ufInicial = agendaToEdit!!.uf,
@@ -206,24 +179,17 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                     showEditDialog = false
                     agendaToEdit = null
                 },
-                onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
-                    viewModel.editar(
-                        agendaToEdit!!.copy(
-                            nome = nome,
-                            telefone = telefone,
-                            cep = cep,  // Novo campo
-                            logradouro = logradouro,  // Novo campo
-                            bairro = bairro,
-                            localidade = localidade,
-                            uf = uf
-                        )
-                    )
+                onSaveClick = { nome, telefone, endereco ->
+                    viewModel.editar(agendaToEdit!!.copy(
+                        nome = nome,
+                        telefone = telefone,
+                        endereco = endereco
+                    ))
                     showEditDialog = false
                     agendaToEdit = null
                 }
             )
         }
-
 
         if (showRemoveDialog && agendaToRemove != null) {
             Remove(
@@ -260,20 +226,16 @@ fun sendSms(context: ComponentActivity, telefone: String) {
 fun AgendaFormDialog(
     onDismissRequest: () -> Unit,
     viewModel: AgendaViewModel,
-    onAddClick: (String, String, String, String, String, String, String) -> Unit
+    onAddClick: (String, String, Endereco) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -314,7 +276,6 @@ fun AgendaFormDialog(
                     },
                     label = { Text("CEP") }
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = logradouro,
@@ -342,13 +303,12 @@ fun AgendaFormDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        onAddClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
+                        onAddClick(nome, telefone, Endereco(cep, logradouro, bairro, localidade, uf))
                         onDismissRequest()
                     }
                 ) {
                     Text("Adicionar contato")
                 }
-
             }
         }
     }
@@ -364,20 +324,16 @@ fun Edit(
     localidadeInicial: String,
     ufInicial: String,
     onDismissRequest: () -> Unit,
-    onSaveClick: (String, String, String, String, String, String, String) -> Unit
+    onSaveClick: (String, String, Endereco) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -410,21 +366,21 @@ fun Edit(
                 OutlinedTextField(
                     value = logradouro,
                     onValueChange = { logradouro = it },
-                    label = { Text("logradouro") }
+                    label = { Text("Logradouro") }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = bairro,
                     onValueChange = { bairro = it },
-                    label = { Text("bairro") }
+                    label = { Text("Bairro") }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = localidade,
                     onValueChange = { localidade = it },
-                    label = { Text("localidade") }
+                    label = { Text("Localidade") }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = uf,
                     onValueChange = { uf = it },
@@ -433,7 +389,7 @@ fun Edit(
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        onSaveClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
+                        onSaveClick(nome, telefone, Endereco(cep, logradouro, bairro, localidade, uf))
                         onDismissRequest()
                     }
                 ) {
@@ -452,33 +408,24 @@ fun Remove(
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(text = "Deseja remover o contato $nome?", style = MaterialTheme.typography.bodyLarge)
+                Text("Tem certeza que deseja remover o contato $nome?")
                 Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Button(onClick = { onDismissRequest() }) {
-                        Text("Cancelar")
+                Row {
+                    Button(onClick = onRemoveClick) {
+                        Text("Sim")
                     }
-                    Button(onClick = {
-                        onRemoveClick()
-                        onDismissRequest()
-                    }) {
-                        Text("Remover")
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Button(onClick = onDismissRequest) {
+                        Text("Não")
                     }
                 }
             }

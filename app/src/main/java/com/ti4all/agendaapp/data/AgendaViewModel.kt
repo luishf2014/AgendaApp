@@ -11,6 +11,7 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+
 class AgendaViewModel(application: AgendaApplication) : ViewModel() {
     private val agendaDao = application.database.agendaDao()
     private val _agendaList = MutableStateFlow<List<Agenda>>(emptyList())
@@ -59,13 +60,13 @@ class AgendaViewModel(application: AgendaApplication) : ViewModel() {
 
     private val cepApiService = retrofit.create(ViaCepService::class.java)
 
-    fun buscarCep(cep: String, onResponse: (Agenda?) -> Unit) {
-        cepApiService.buscarCep(cep).enqueue(object : retrofit2.Callback<Agenda> {
-            override fun onResponse(call: Call<Agenda>, response: retrofit2.Response<Agenda>) {
+    fun buscarCep(cep: String, onResponse: (Endereco?) -> Unit) {
+        cepApiService.buscarCep(cep).enqueue(object : retrofit2.Callback<Endereco> {
+            override fun onResponse(call: Call<Endereco>, response: retrofit2.Response<Endereco>) {
                 onResponse(response.body())
             }
 
-            override fun onFailure(call: Call<Agenda>, t: Throwable) {
+            override fun onFailure(call: Call<Endereco>, t: Throwable) {
                 onResponse(null)
             }
         })

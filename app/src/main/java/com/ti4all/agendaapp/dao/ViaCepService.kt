@@ -7,5 +7,5 @@ import retrofit2.http.Path
 
 interface ViaCepService {
     @GET("ws/{cep}/json/")
-    fun buscarCep(@Path("cep") cep: String): Call<Agenda>
+    fun buscarCep(@Path("cep") cep: String): Call<Endereco>
 }

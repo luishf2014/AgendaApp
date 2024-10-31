@@ -8,10 +8,6 @@ data class Agenda(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val nome: String,
     val telefone: String,
-    val cep: String,
-    val logradouro: String,
-    val bairro: String,
-    val localidade: String,
-    val uf: String
+    val endereco: Endereco
 )
-Endereco.Cep = Agenda.cep
+// Endereco.Cep = Agenda.cep
