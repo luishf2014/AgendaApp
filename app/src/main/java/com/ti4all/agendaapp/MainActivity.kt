@@ -16,13 +16,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import com.ti4all.agendaapp.data.Agenda
 import com.ti4all.agendaapp.data.AgendaViewModel
+import com.ti4all.agendaapp.data.AgendaViewModelFactory
 import com.ti4all.agendaapp.data.Endereco
 import com.ti4all.agendaapp.ui.theme.AgendaAppTheme
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: AgendaViewModel by viewModels()
+
+    private val viewModel: AgendaViewModel by lazy {
+        ViewModelProvider(this, AgendaViewModelFactory(application as AgendaApplication)).get(AgendaViewModel::class.java)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -155,11 +160,16 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
             AgendaFormDialog(
                 onDismissRequest = { showDialog = false },
                 viewModel = viewModel,
-                onAddClick = { nome, telefone, endereco ->
+                onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
                     viewModel.inserir(Agenda(
                         nome = nome,
                         telefone = telefone,
-                        endereco = endereco
+                        cep = cep,
+                        logradouro = logradouro,
+                        bairro = bairro,
+                        localidade = localidade,
+                        uf = uf,
+//                        numero = numero
                     ))
                     showDialog = false
                 }
@@ -175,15 +185,21 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                 bairroInicial = agendaToEdit!!.bairro,
                 localidadeInicial = agendaToEdit!!.localidade,
                 ufInicial = agendaToEdit!!.uf,
+//                numeroInicial = agendaToEdit!!.numero,
                 onDismissRequest = {
                     showEditDialog = false
                     agendaToEdit = null
                 },
-                onSaveClick = { nome, telefone, endereco ->
+                onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
                     viewModel.editar(agendaToEdit!!.copy(
                         nome = nome,
                         telefone = telefone,
-                        endereco = endereco
+                        cep = cep,
+                        logradouro = logradouro,
+                        bairro = bairro,
+                        localidade = localidade,
+                        uf = uf
+//                        numero = numero
                     ))
                     showEditDialog = false
                     agendaToEdit = null
@@ -226,7 +242,7 @@ fun sendSms(context: ComponentActivity, telefone: String) {
 fun AgendaFormDialog(
     onDismissRequest: () -> Unit,
     viewModel: AgendaViewModel,
-    onAddClick: (String, String, Endereco) -> Unit
+    onAddClick: (String, String, String, String, String, String, String) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
@@ -246,6 +262,7 @@ fun AgendaFormDialog(
                 var bairro by remember { mutableStateOf("") }
                 var localidade by remember { mutableStateOf("") }
                 var uf by remember { mutableStateOf("") }
+//                var numero by remember { mutableStateOf("") }
 
                 OutlinedTextField(
                     value = nome,
@@ -263,7 +280,7 @@ fun AgendaFormDialog(
                     value = cep,
                     onValueChange = { newCep ->
                         cep = newCep
-                        if (newCep.length == 8) {
+                        if (newCep.length == 8) { // Verifica se o CEP tem 8 caracteres
                             viewModel.buscarCep(newCep) { endereco ->
                                 endereco?.let {
                                     logradouro = it.logradouro
@@ -300,10 +317,16 @@ fun AgendaFormDialog(
                     onValueChange = { uf = it },
                     label = { Text("UF") }
                 )
+//                Spacer(modifier = Modifier.height(8.dp))
+//                OutlinedTextField(
+//                    value = numero,
+//                    onValueChange = { numero = it },
+//                    label = { Text("Número") }
+//                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        onAddClick(nome, telefone, Endereco(cep, logradouro, bairro, localidade, uf))
+                        onAddClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
                         onDismissRequest()
                     }
                 ) {
@@ -323,8 +346,9 @@ fun Edit(
     bairroInicial: String,
     localidadeInicial: String,
     ufInicial: String,
+//    numeroInicial: String,
     onDismissRequest: () -> Unit,
-    onSaveClick: (String, String, Endereco) -> Unit
+    onSaveClick: (String, String, String, String, String, String, String) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
@@ -344,6 +368,7 @@ fun Edit(
                 var bairro by remember { mutableStateOf(bairroInicial) }
                 var localidade by remember { mutableStateOf(localidadeInicial) }
                 var uf by remember { mutableStateOf(ufInicial) }
+//                var numero by remember { mutableStateOf(numeroInicial) }
 
                 OutlinedTextField(
                     value = nome,
@@ -386,10 +411,16 @@ fun Edit(
                     onValueChange = { uf = it },
                     label = { Text("UF") }
                 )
+//                Spacer(modifier = Modifier.height(8.dp))
+//                OutlinedTextField(
+//                    value = numero,
+//                    onValueChange = { uf = numero },
+//                    label = { Text("Número") }
+//                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        onSaveClick(nome, telefone, Endereco(cep, logradouro, bairro, localidade, uf))
+                        onSaveClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
                         onDismissRequest()
                     }
                 ) {

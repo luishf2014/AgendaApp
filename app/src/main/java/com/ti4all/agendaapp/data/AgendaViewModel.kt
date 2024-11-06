@@ -11,11 +11,10 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-
 class AgendaViewModel(application: AgendaApplication) : ViewModel() {
     private val agendaDao = application.database.agendaDao()
     private val _agendaList = MutableStateFlow<List<Agenda>>(emptyList())
-    val agendaList : StateFlow<List<Agenda>> = _agendaList
+    val agendaList: StateFlow<List<Agenda>> = _agendaList
 
     init {
         listarTodos()
@@ -52,7 +51,7 @@ class AgendaViewModel(application: AgendaApplication) : ViewModel() {
         }
     }
 
-    //Para o Cep
+    // Para o Cep
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://viacep.com.br/ws/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -71,6 +70,4 @@ class AgendaViewModel(application: AgendaApplication) : ViewModel() {
             }
         })
     }
-
-
 }
