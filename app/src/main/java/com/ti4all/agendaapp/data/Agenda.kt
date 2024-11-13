@@ -13,6 +13,5 @@ data class Agenda(
     val bairro: String,
     val localidade: String,
     val uf: String,
-//    val numero: String
+    val numero: String
 )
-// Endereco.Cep = Agenda.cep

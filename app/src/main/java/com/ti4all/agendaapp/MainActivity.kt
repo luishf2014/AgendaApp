@@ -2,10 +2,7 @@ package com.ti4all.agendaapp
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -20,7 +17,15 @@ import androidx.lifecycle.ViewModelProvider
 import com.ti4all.agendaapp.data.Agenda
 import com.ti4all.agendaapp.data.AgendaViewModel
 import com.ti4all.agendaapp.data.AgendaViewModelFactory
-import com.ti4all.agendaapp.data.Endereco
+import android.os.Bundle
+import android.os.Handler
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat.startActivity
 import com.ti4all.agendaapp.ui.theme.AgendaAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,10 +40,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             AgendaAppTheme {
                 AgendaScreen(viewModel = viewModel, context = this)
+
             }
         }
     }
 }
+
 
 @Composable
 fun AgendaList(
@@ -160,7 +167,7 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
             AgendaFormDialog(
                 onDismissRequest = { showDialog = false },
                 viewModel = viewModel,
-                onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
+                onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
                     viewModel.inserir(Agenda(
                         nome = nome,
                         telefone = telefone,
@@ -169,7 +176,7 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                         bairro = bairro,
                         localidade = localidade,
                         uf = uf,
-//                        numero = numero
+                        numero = numero
                     ))
                     showDialog = false
                 }
@@ -185,12 +192,12 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                 bairroInicial = agendaToEdit!!.bairro,
                 localidadeInicial = agendaToEdit!!.localidade,
                 ufInicial = agendaToEdit!!.uf,
-//                numeroInicial = agendaToEdit!!.numero,
+                numeroInicial = agendaToEdit!!.numero,
                 onDismissRequest = {
                     showEditDialog = false
                     agendaToEdit = null
                 },
-                onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf ->
+                onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
                     viewModel.editar(agendaToEdit!!.copy(
                         nome = nome,
                         telefone = telefone,
@@ -198,8 +205,8 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
                         logradouro = logradouro,
                         bairro = bairro,
                         localidade = localidade,
-                        uf = uf
-//                        numero = numero
+                        uf = uf,
+                        numero = numero
                     ))
                     showEditDialog = false
                     agendaToEdit = null
@@ -242,7 +249,7 @@ fun sendSms(context: ComponentActivity, telefone: String) {
 fun AgendaFormDialog(
     onDismissRequest: () -> Unit,
     viewModel: AgendaViewModel,
-    onAddClick: (String, String, String, String, String, String, String) -> Unit
+    onAddClick: (String, String, String, String, String, String, String, String) -> Unit
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
@@ -262,7 +269,7 @@ fun AgendaFormDialog(
                 var bairro by remember { mutableStateOf("") }
                 var localidade by remember { mutableStateOf("") }
                 var uf by remember { mutableStateOf("") }
-//                var numero by remember { mutableStateOf("") }
+                var numero by remember { mutableStateOf("") }
 
                 OutlinedTextField(
                     value = nome,
@@ -301,6 +308,11 @@ fun AgendaFormDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
+                    value = numero,
+                    onValueChange = { numero = it },
+                    label = { Text("Número") }
+                )
+                OutlinedTextField(
                     value = bairro,
                     onValueChange = { bairro = it },
                     label = { Text("Bairro") }
@@ -317,16 +329,10 @@ fun AgendaFormDialog(
                     onValueChange = { uf = it },
                     label = { Text("UF") }
                 )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                OutlinedTextField(
-//                    value = numero,
-//                    onValueChange = { numero = it },
-//                    label = { Text("Número") }
-//                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        onAddClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
+                        onAddClick(nome, telefone, cep, logradouro, bairro, localidade, uf, numero)
                         onDismissRequest()
                     }
                 ) {
@@ -346,10 +352,38 @@ fun Edit(
     bairroInicial: String,
     localidadeInicial: String,
     ufInicial: String,
-//    numeroInicial: String,
+    numeroInicial: String,
     onDismissRequest: () -> Unit,
-    onSaveClick: (String, String, String, String, String, String, String) -> Unit
+    onSaveClick: (String, String, String, String, String, String, String, String) -> Unit
 ) {
+    val context = LocalContext.current
+    fun shareData() {
+        // Formatar os dados a serem compartilhados
+        val data = """
+            Nome: $nomeInicial
+            Telefone: $telefoneInicial
+            CEP: $cepInicial
+            Logradouro: $logradouroInicial
+            Número: $numeroInicial            
+            Bairro: $bairroInicial
+            Localidade: $localidadeInicial
+            UF: $ufInicial
+        """.trimIndent()
+
+        // Criando o Intent de compartilhamento
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, data)  // Dados que serão compartilhados
+            type = "text/plain"  // Tipo de conteúdo: texto simples
+        }
+
+        // Verificando se há algum app disponível para lidar com o Intent de compartilhamento
+        try {
+            startActivity(context, Intent.createChooser(sendIntent, "Compartilhar com"), null)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Não foi possível compartilhar os dados", Toast.LENGTH_SHORT).show()
+        }
+    }
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -368,7 +402,7 @@ fun Edit(
                 var bairro by remember { mutableStateOf(bairroInicial) }
                 var localidade by remember { mutableStateOf(localidadeInicial) }
                 var uf by remember { mutableStateOf(ufInicial) }
-//                var numero by remember { mutableStateOf(numeroInicial) }
+                var numero by remember { mutableStateOf(numeroInicial) }
 
                 OutlinedTextField(
                     value = nome,
@@ -395,6 +429,12 @@ fun Edit(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
+                    value = numero,
+                    onValueChange = { numero = it },
+                    label = { Text("Número") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
                     value = bairro,
                     onValueChange = { bairro = it },
                     label = { Text("Bairro") }
@@ -411,21 +451,28 @@ fun Edit(
                     onValueChange = { uf = it },
                     label = { Text("UF") }
                 )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                OutlinedTextField(
-//                    value = numero,
-//                    onValueChange = { uf = numero },
-//                    label = { Text("Número") }
-//                )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        onSaveClick(nome, telefone, cep, logradouro, bairro, localidade, uf)
-                        onDismissRequest()
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,  // Alinha os elementos verticalmente no centro
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)  // Espaçamento entre os elementos
                 ) {
-                    Text("Salvar alterações")
+                    Button(
+                        onClick = {
+                            onSaveClick(nome, telefone, cep, logradouro, bairro, localidade, uf, numero)
+                            onDismissRequest()
+                        }
+                    ) {
+                        Text("Salvar alterações")
+                    }
+
+                    // Ícone ao lado do botão
+                    Icon(
+                        imageVector = Icons.Filled.Send,
+                        contentDescription = "Adicionar contato",
+                        modifier = Modifier.size(24.dp).clickable{ shareData() }
+                    )
                 }
+
             }
         }
     }
