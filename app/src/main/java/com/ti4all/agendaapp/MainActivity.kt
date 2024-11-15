@@ -23,8 +23,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.ContextCompat.startActivity
 import com.ti4all.agendaapp.ui.theme.AgendaAppTheme
 
@@ -39,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AgendaAppTheme {
+
                 AgendaScreen(viewModel = viewModel, context = this)
 
             }
@@ -54,24 +59,50 @@ fun AgendaList(
     onEditClick: (Agenda) -> Unit,
     onCallClick: (Agenda) -> Unit,
     onSmsClick: (Agenda) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Box(modifier = Modifier.padding(16.dp)) {
+)
+    {
+        Card(
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        agenda.nome.firstOrNull()?.toString() ?: "",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = "Nome: ${agenda.nome}")
+                    Text(
+                        text = agenda.nome,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Telefone: ${agenda.telefone}")
+                    Text(
+                        text = agenda.telefone,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
                 }
 
                 IconButton(onClick = { onCallClick(agenda) }) {
@@ -92,7 +123,7 @@ fun AgendaList(
             }
         }
     }
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,128 +139,152 @@ fun AgendaScreen(viewModel: AgendaViewModel, context: ComponentActivity) {
         viewModel.listarTodos()
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Agenda Telefônica")
-                }
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Minha Agenda",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar contato")
             }
-        )
-    }) { innerPadding ->
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
-                .fillMaxWidth(),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                "Lista de Contatos",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            agendaList.forEach { agenda ->
-                AgendaList(
-                    agenda = agenda,
-                    onRemoveClick = { selectedAgenda ->
-                        agendaToRemove = selectedAgenda
-                        showRemoveDialog = true
+            if (agendaList.isEmpty()) {
+                Text(
+                    "Nenhum contato disponível.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                agendaList.forEach { agenda ->
+                    AgendaList(
+                        agenda = agenda,
+                        onRemoveClick = { selectedAgenda ->
+                            agendaToRemove = selectedAgenda
+                            showRemoveDialog = true
+                        },
+                        onEditClick = { selectedAgenda ->
+                            agendaToEdit = selectedAgenda
+                            showEditDialog = true
+                        },
+                        onCallClick = { selectedAgenda ->
+                            makePhoneCall(context, selectedAgenda.telefone)
+                        },
+                        onSmsClick = { selectedAgenda ->
+                            sendSms(context, selectedAgenda.telefone)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+            if (showDialog) {
+                AgendaFormDialog(
+                    onDismissRequest = { showDialog = false },
+                    viewModel = viewModel,
+                    onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
+                        viewModel.inserir(
+                            Agenda(
+                                nome = nome,
+                                telefone = telefone,
+                                cep = cep,
+                                logradouro = logradouro,
+                                bairro = bairro,
+                                localidade = localidade,
+                                uf = uf,
+                                numero = numero
+                            )
+                        )
+                        showDialog = false
+                    }
+                )
+            }
+
+            if (showEditDialog && agendaToEdit != null) {
+                Edit(
+                    nomeInicial = agendaToEdit!!.nome,
+                    telefoneInicial = agendaToEdit!!.telefone,
+                    cepInicial = agendaToEdit!!.cep,
+                    logradouroInicial = agendaToEdit!!.logradouro,
+                    bairroInicial = agendaToEdit!!.bairro,
+                    localidadeInicial = agendaToEdit!!.localidade,
+                    ufInicial = agendaToEdit!!.uf,
+                    numeroInicial = agendaToEdit!!.numero,
+                    onDismissRequest = {
+                        showEditDialog = false
+                        agendaToEdit = null
                     },
-                    onEditClick = { selectedAgenda ->
-                        agendaToEdit = selectedAgenda
-                        showEditDialog = true
+                    onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
+                        viewModel.editar(
+                            agendaToEdit!!.copy(
+                                nome = nome,
+                                telefone = telefone,
+                                cep = cep,
+                                logradouro = logradouro,
+                                bairro = bairro,
+                                localidade = localidade,
+                                uf = uf,
+                                numero = numero
+                            )
+                        )
+                        showEditDialog = false
+                        agendaToEdit = null
+                    }
+                )
+            }
+
+            if (showRemoveDialog && agendaToRemove != null) {
+                Remove(
+                    nome = agendaToRemove!!.nome,
+                    onDismissRequest = {
+                        showRemoveDialog = false
+                        agendaToRemove = null
                     },
-                    onCallClick = { selectedAgenda ->
-                        makePhoneCall(context, selectedAgenda.telefone)
-                    },
-                    onSmsClick = { selectedAgenda ->
-                        sendSms(context, selectedAgenda.telefone)
+                    onRemoveClick = {
+                        viewModel.deletar(agendaToRemove!!.id)
+                        showRemoveDialog = false
+                        agendaToRemove = null
                     }
                 )
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                FloatingActionButton(onClick = { showDialog = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Adicionar contato")
-                }
-            }
-        }
 
-        if (showDialog) {
-            AgendaFormDialog(
-                onDismissRequest = { showDialog = false },
-                viewModel = viewModel,
-                onAddClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
-                    viewModel.inserir(Agenda(
-                        nome = nome,
-                        telefone = telefone,
-                        cep = cep,
-                        logradouro = logradouro,
-                        bairro = bairro,
-                        localidade = localidade,
-                        uf = uf,
-                        numero = numero
-                    ))
-                    showDialog = false
-                }
-            )
-        }
 
-        if (showEditDialog && agendaToEdit != null) {
-            Edit(
-                nomeInicial = agendaToEdit!!.nome,
-                telefoneInicial = agendaToEdit!!.telefone,
-                cepInicial = agendaToEdit!!.cep,
-                logradouroInicial = agendaToEdit!!.logradouro,
-                bairroInicial = agendaToEdit!!.bairro,
-                localidadeInicial = agendaToEdit!!.localidade,
-                ufInicial = agendaToEdit!!.uf,
-                numeroInicial = agendaToEdit!!.numero,
-                onDismissRequest = {
-                    showEditDialog = false
-                    agendaToEdit = null
-                },
-                onSaveClick = { nome, telefone, cep, logradouro, bairro, localidade, uf, numero ->
-                    viewModel.editar(agendaToEdit!!.copy(
-                        nome = nome,
-                        telefone = telefone,
-                        cep = cep,
-                        logradouro = logradouro,
-                        bairro = bairro,
-                        localidade = localidade,
-                        uf = uf,
-                        numero = numero
-                    ))
-                    showEditDialog = false
-                    agendaToEdit = null
-                }
-            )
-        }
-
-        if (showRemoveDialog && agendaToRemove != null) {
-            Remove(
-                nome = agendaToRemove!!.nome,
-                onDismissRequest = {
-                    showRemoveDialog = false
-                    agendaToRemove = null
-                },
-                onRemoveClick = {
-                    viewModel.deletar(agendaToRemove!!.id)
-                    showRemoveDialog = false
-                    agendaToRemove = null
-                }
-            )
-        }
-    }
-}
 
 fun makePhoneCall(context: ComponentActivity, telefone: String) {
     val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -253,12 +308,16 @@ fun AgendaFormDialog(
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -357,7 +416,7 @@ fun Edit(
     onSaveClick: (String, String, String, String, String, String, String, String) -> Unit
 ) {
     val context = LocalContext.current
-    fun shareData() {
+    fun compartilharDados() {
         // Formatar os dados a serem compartilhados
         val data = """
             Nome: $nomeInicial
@@ -386,12 +445,16 @@ fun Edit(
     }
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -469,7 +532,9 @@ fun Edit(
                     Icon(
                         imageVector = Icons.Filled.Send,
                         contentDescription = "Adicionar contato",
-                        modifier = Modifier.size(24.dp).clickable{ shareData() }
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { compartilharDados() }
                     )
                 }
 
@@ -486,12 +551,16 @@ fun Remove(
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
